@@ -54,7 +54,17 @@ Pricing & model snapshot dated **2026-05-15** (USD per 1,000,000 tokens). Preset
 - [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 - [Anthropic rate limits](https://platform.claude.com/docs/en/api/rate-limits)
 - [OpenAI rate limits](https://platform.openai.com/docs/guides/rate-limits)
-- [Machine-readable snapshot (JSON)](https://llmcapplanner.vercel.app/snapshot.json) — versioned, dated; built for agents/CI to consume.
+- [Machine-readable dataset (JSON)](https://llmcapplanner.vercel.app/v1/models.json) — versioned, freshness-stamped; built for agents/CI to consume.
+
+## Data contract
+
+The dataset is served as a single versioned JSON at **`https://llmcapplanner.vercel.app/v1/models.json`** (CORS-open, `application/json`). Fields: `schema_version` (currently `1.0`), `last_verified` (date of the most recent manual check against the official provider docs in `sources`), pricing per 1M tokens, and per-model / per-tier rate-limit anchors. Pricing and limits are re-verified whenever a model launches or a price/limit changes; a breaking schema change increments `schema_version` and the prior version stays reachable at its path. Copy-runnable:
+
+```sh
+curl -s https://llmcapplanner.vercel.app/v1/models.json | jq '{last_verified, schema_version}'
+```
+
+(`/snapshot.json` is kept as a stable alias of the same payload.)
 
 ## Keywords
 

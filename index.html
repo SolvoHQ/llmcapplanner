@@ -287,7 +287,12 @@
       <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Anthropic pricing ↗</a>
       <a href="https://platform.claude.com/docs/en/api/rate-limits" target="_blank" rel="noopener">Anthropic rate limits ↗</a>
       <a href="https://platform.openai.com/docs/guides/rate-limits" target="_blank" rel="noopener">OpenAI rate limits ↗</a>
-      <a href="/snapshot.json" target="_blank" rel="noopener">Machine-readable snapshot (JSON) ↗</a>
+      <a href="/v1/models.json" target="_blank" rel="noopener">Machine-readable dataset (JSON) ↗</a>
+    </div>
+    <div style="margin-top:14px;font-size:11px;color:var(--ink-faint);line-height:1.7">
+      <strong style="color:var(--ink-dim);text-transform:uppercase;font-size:10.5px;letter-spacing:1px;display:block;margin-bottom:4px">Data contract</strong>
+      Versioned JSON dataset at <a href="/v1/models.json" target="_blank" rel="noopener">/v1/models.json</a> — <code>schema_version 1.0</code>, <code>last_verified 2026-05-15</code>. Re-verified against provider docs on every model/price change; breaking schema changes increment <code>schema_version</code> and prior versions stay reachable. Consume it:
+      <pre style="margin:8px 0 0;padding:8px 10px;background:var(--line);border-radius:4px;overflow-x:auto;font-size:11px;white-space:pre-wrap;word-break:break-all">curl -s https://llmcapplanner.vercel.app/v1/models.json | jq '{last_verified, schema_version}'</pre>
     </div>
     <div class="seclinks" style="margin-top:14px">
       <strong style="color:var(--ink-dim);text-transform:uppercase;font-size:10.5px;letter-spacing:1px;display:block;margin-bottom:4px">Guides</strong>
