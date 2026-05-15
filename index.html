@@ -289,6 +289,14 @@
       <a href="https://platform.openai.com/docs/guides/rate-limits" target="_blank" rel="noopener">OpenAI rate limits ↗</a>
       <a href="/snapshot.json" target="_blank" rel="noopener">Machine-readable snapshot (JSON) ↗</a>
     </div>
+    <div class="seclinks" style="margin-top:14px">
+      <strong style="color:var(--ink-dim);text-transform:uppercase;font-size:10.5px;letter-spacing:1px;display:block;margin-bottom:4px">Guides</strong>
+      <a href="/claude-api-rate-limits-2026">Claude rate limits</a>
+      <a href="/openai-api-rate-limits-2026">OpenAI rate limits</a>
+      <a href="/claude-vs-gpt-api-cost-2026">Claude vs GPT cost</a>
+      <a href="/llm-rate-limit-budget">Sizing your budget</a>
+      <a href="/claude-api-cost-calculator">Claude cost examples</a>
+    </div>
     <span class="prov">Maintained by SolvoHQ</span>
   </footer>
 
@@ -564,8 +572,30 @@ elTier.addEventListener("change", ()=>{ applyPreset(); compute(); });
   compute();
 }));
 
+// ---- deep-link prefill (query string) ----
+function applyDeepLink(){
+  const q = new URLSearchParams(location.search);
+  const pv = q.get("provider");
+  if (pv === "anthropic" || pv === "openai"){
+    elProvider.value = pv;
+    fillModels(); fillTiers(); syncProviderUI();
+  }
+  const md = q.get("model");
+  if (md && Object.prototype.hasOwnProperty.call(MODELS[elProvider.value], md)) elModel.value = md;
+  const tr = q.get("tier");
+  if (tr && TIER_OPTS[elProvider.value].some(o => o[0] === tr)) elTier.value = tr;
+  applyPreset();
+  const setNum = (el, key) => {
+    const raw = q.get(key);
+    if (raw === null) return;
+    const n = parseFloat(raw);
+    if (Number.isFinite(n) && n >= 0) el.value = n;
+  };
+  setNum(elRpm, "rpm"); setNum(elTi, "ti"); setNum(elTo, "to");
+}
+
 // ---- init ----
-fillModels(); fillTiers(); syncProviderUI(); applyPreset(); compute();
+fillModels(); fillTiers(); syncProviderUI(); applyPreset(); applyDeepLink(); compute();
 </script>
 <script data-goatcounter="https://llmcapplanner.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
