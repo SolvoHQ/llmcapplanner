@@ -5,23 +5,11 @@
     <lastmod>2026-05-15</lastmod>
   </url>
   <url>
-    <loc>https://llmcapplanner.vercel.app/claude-api-rate-limits-2026</loc>
+    <loc>https://llmcapplanner.vercel.app/v1/rate-limits.json</loc>
     <lastmod>2026-05-15</lastmod>
   </url>
   <url>
-    <loc>https://llmcapplanner.vercel.app/openai-api-rate-limits-2026</loc>
-    <lastmod>2026-05-15</lastmod>
-  </url>
-  <url>
-    <loc>https://llmcapplanner.vercel.app/claude-vs-gpt-api-cost-2026</loc>
-    <lastmod>2026-05-15</lastmod>
-  </url>
-  <url>
-    <loc>https://llmcapplanner.vercel.app/llm-rate-limit-budget</loc>
-    <lastmod>2026-05-15</lastmod>
-  </url>
-  <url>
-    <loc>https://llmcapplanner.vercel.app/claude-api-cost-calculator</loc>
+    <loc>https://llmcapplanner.vercel.app/v1/models.json</loc>
     <lastmod>2026-05-15</lastmod>
   </url>
 </urlset>

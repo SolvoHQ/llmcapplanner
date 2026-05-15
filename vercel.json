@@ -1,6 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
+  "redirects": [
+    { "source": "/claude-api-cost-calculator", "destination": "/", "permanent": true },
+    { "source": "/claude-api-rate-limits-2026", "destination": "/", "permanent": true },
+    { "source": "/claude-vs-gpt-api-cost-2026", "destination": "/", "permanent": true },
+    { "source": "/llm-rate-limit-budget", "destination": "/", "permanent": true },
+    { "source": "/openai-api-rate-limits-2026", "destination": "/", "permanent": true }
+  ],
   "headers": [
     { "source": "/v1/models.json", "headers": [ { "key": "Access-Control-Allow-Origin", "value": "*" }, { "key": "Content-Type", "value": "application/json; charset=utf-8" }, { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" } ] },
     { "source": "/v1/rate-limits.json", "headers": [ { "key": "Access-Control-Allow-Origin", "value": "*" }, { "key": "Content-Type", "value": "application/json; charset=utf-8" }, { "key": "Cache-Control", "value": "public, max-age=3600, stale-while-revalidate=86400" } ] },
