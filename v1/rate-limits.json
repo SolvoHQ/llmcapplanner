@@ -9,22 +9,18 @@
   "disclaimer": "Presets change. Verify current numbers in your provider dashboard. Rate-limit tier numbers are documented anchor defaults you should confirm.",
   "providers": {
     "anthropic": {
-      "rate_limits": {
-        "note": "Anthropic publishes ITPM/OTPM per model, not a single per-tier number.",
-        "per_model": {
-          "claude-opus-4-7":   { "t1": {"rpm":50,"itpm":500000,"otpm":80000},  "t4": {"rpm":4000,"itpm":10000000,"otpm":800000} },
-          "claude-sonnet-4-6": { "t1": {"rpm":50,"itpm":30000,"otpm":8000},     "t4": {"rpm":4000,"itpm":2000000,"otpm":400000} },
-          "claude-haiku-4-5":  { "t1": {"rpm":50,"itpm":50000,"otpm":10000},    "t4": {"rpm":4000,"itpm":4000000,"otpm":800000} }
-        }
+      "note": "Anthropic publishes ITPM/OTPM per model, not a single per-tier number.",
+      "per_model": {
+        "claude-opus-4-7":   { "t1": {"rpm":50,"itpm":500000,"otpm":80000},  "t4": {"rpm":4000,"itpm":10000000,"otpm":800000} },
+        "claude-sonnet-4-6": { "t1": {"rpm":50,"itpm":30000,"otpm":8000},     "t4": {"rpm":4000,"itpm":2000000,"otpm":400000} },
+        "claude-haiku-4-5":  { "t1": {"rpm":50,"itpm":50000,"otpm":10000},    "t4": {"rpm":4000,"itpm":4000000,"otpm":800000} }
       }
     },
     "openai": {
-      "rate_limits": {
-        "note": "OpenAI enforces RPM and TPM independently per tier.",
-        "per_tier": {
-          "t1": {"rpm":1000,"tpm":500000},
-          "t5": {"rpm":10000,"tpm":40000000}
-        }
+      "note": "OpenAI enforces RPM and TPM independently per tier.",
+      "per_tier": {
+        "t1": {"rpm":1000,"tpm":500000},
+        "t5": {"rpm":10000,"tpm":40000000}
       }
     }
   },
