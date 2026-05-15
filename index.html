@@ -292,16 +292,19 @@ const MODELS = {
   }
 };
 
-// Documented May-2026 anchor defaults. ITPM varies per model on Anthropic Tier 4;
-// opus uses the same 2,000,000 planning anchor as sonnet. All fields are editable.
-const ANTHROPIC_T4_ITPM = {
-  "claude-opus-4-7": 2000000,
-  "claude-sonnet-4-6": 2000000,
-  "claude-haiku-4-5": 4000000
+// Per-model Anthropic tier limits — source: platform.claude.com/docs/en/api/rate-limits, verified 2026-05-15.
+// Anthropic publishes ITPM/OTPM PER MODEL (Opus ITPM is much higher than Sonnet at the same tier),
+// so a single per-tier number is structurally wrong. All fields remain editable.
+const ANTHROPIC_LIMITS = {
+  "claude-opus-4-7":   { t1:{rpm:50, itpm:500000, otpm:80000}, t4:{rpm:4000, itpm:10000000, otpm:800000} },
+  "claude-sonnet-4-6": { t1:{rpm:50, itpm:30000,  otpm:8000},  t4:{rpm:4000, itpm:2000000,  otpm:400000} },
+  "claude-haiku-4-5":  { t1:{rpm:50, itpm:50000,  otpm:10000}, t4:{rpm:4000, itpm:4000000,  otpm:800000} }
 };
 function anthropicPreset(tier, model){
-  if (tier === "t1") return { rpm:50,   itpm:0,                          otpm:0 };
-  if (tier === "t4") return { rpm:4000, itpm:ANTHROPIC_T4_ITPM[model]||2000000, otpm:400000 };
+  const m = ANTHROPIC_LIMITS[model];
+  if (!m) return null;
+  if (tier === "t1") return { rpm:m.t1.rpm, itpm:m.t1.itpm, otpm:m.t1.otpm };
+  if (tier === "t4") return { rpm:m.t4.rpm, itpm:m.t4.itpm, otpm:m.t4.otpm };
   return null; // custom
 }
 function openaiPreset(tier){
@@ -325,6 +328,21 @@ const limA=$("limAnthropic"), limO=$("limOpenai"), limNote=$("limNote");
 
 function num(el){ const v=parseFloat(el.value); return Number.isFinite(v)&&v>0 ? v : 0; }
 
+let _trackTimer = null;
+const _seenCombos = new Set();
+function scheduleTrack(){
+  clearTimeout(_trackTimer);
+  _trackTimer = setTimeout(function(){
+    const R = num(elRpm);
+    if (R <= 0) return;
+    const combo = elProvider.value + "|" + elModel.value + "|" + elTier.value;
+    if (_seenCombos.has(combo)) return;
+    _seenCombos.add(combo);
+    // recompute binding key cheaply for the payload
+    track('plan_computed', { provider: elProvider.value, model: elModel.value, tier: elTier.value });
+  }, 1200);
+}
+
 function fmtUSD(x){
   if (!Number.isFinite(x)) return "—";
   if (x === 0) return "$0.00";
@@ -343,6 +361,16 @@ function fmtInt(x){
 function fmtPct(x){
   if (!Number.isFinite(x)) return "—";
   return (x>=10 ? x.toFixed(0) : x.toFixed(1)) + "%";
+}
+
+function track(name, detail){
+  try { window.dispatchEvent(new CustomEvent('llmcapplanner:' + name, { detail: detail||{} })); } catch (_) {}
+  try { window.va && window.va('event', { name: name, data: detail||{} }); } catch (_) {}
+  try {
+    if (window.goatcounter && typeof window.goatcounter.count === 'function') {
+      window.goatcounter.count({ path: name, event: true, title: name });
+    }
+  } catch (_) {}
 }
 
 // ---- populate selects ----
@@ -485,6 +513,8 @@ function compute(){
       ? "Note: OpenAI also enforces RPD / TPD (per-day) ceilings — not modelled in v0.1."
       : "All three dimensions active. Set any field to 0/blank to exclude it from the binding calc.";
   }
+
+  scheduleTrack();
 }
 
 // ---- events ----
@@ -507,5 +537,6 @@ elTier.addEventListener("change", ()=>{ applyPreset(); compute(); });
 // ---- init ----
 fillModels(); fillTiers(); syncProviderUI(); applyPreset(); compute();
 </script>
+<script data-goatcounter="https://llmcapplanner.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 </body>
 </html>
