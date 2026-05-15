@@ -1,0 +1,50 @@
+{
+  "name": "llmcapplanner-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for LLM capacity planning — projected monthly cost AND which rate-limit dimension (RPM/ITPM/OTPM/TPM) 429s first, computed locally against a dated May-2026 Anthropic/OpenAI pricing + rate-limit snapshot.",
+  "type": "module",
+  "bin": {
+    "llmcapplanner-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "snapshot.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "prepare": "tsc"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SolvoHQ/llmcapplanner.git"
+  },
+  "homepage": "https://llmcapplanner.vercel.app",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "llm",
+    "rate-limit",
+    "429",
+    "cost-calculator",
+    "anthropic",
+    "openai",
+    "claude",
+    "gpt",
+    "capacity-planning"
+  ]
+}
