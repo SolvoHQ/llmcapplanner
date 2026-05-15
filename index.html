@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LLM Cap Planner — cost &amp; rate-limit binding calculator</title>
+<meta name="description" content="Deterministic client-side calculator: projected LLM API cost and which rate-limit dimension binds first (429). No data leaves your browser." />
+<style>
+  :root{
+    --bg:#0b0d10;
+    --panel:#111418;
+    --panel-2:#0e1115;
+    --line:#222a31;
+    --line-soft:#1a2027;
+    --ink:#e6e9ec;
+    --ink-dim:#8a949e;
+    --ink-faint:#5b656e;
+    --accent:#e8a13a;       /* amber */
+    --accent-ink:#1a1205;
+    --ok:#4cc38a;
+    --warn:#e8a13a;
+    --bad:#f0563f;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono","Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:14px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding:0 18px;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:40px 0 64px}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:26px}
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .brand .mark{
+    color:var(--accent);font-weight:700;letter-spacing:.5px;
+    border:1px solid var(--accent);padding:2px 8px;border-radius:3px;
+    font-size:13px;
+  }
+  h1{font-size:18px;font-weight:600;margin:0;letter-spacing:.2px}
+  .tag{color:var(--ink-dim);font-size:12.5px;margin-top:8px;max-width:62ch}
+  .tag b{color:var(--ink)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media (max-width:760px){.grid{grid-template-columns:1fr}}
+
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:18px 18px 20px;
+  }
+  .panel > .ph{
+    display:flex;align-items:center;gap:8px;
+    font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint);
+    margin:0 0 16px;padding-bottom:10px;border-bottom:1px dashed var(--line-soft);
+  }
+  .ph .n{color:var(--accent)}
+
+  label.f{display:block;margin:0 0 14px}
+  label.f:last-child{margin-bottom:0}
+  label.f .lt{
+    display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+    font-size:12px;color:var(--ink-dim);margin-bottom:5px;
+  }
+  label.f .lt .hint{color:var(--ink-faint);font-size:11px;font-style:italic}
+  input,select{
+    width:100%;background:var(--panel-2);color:var(--ink);
+    border:1px solid var(--line);border-radius:4px;
+    font-family:var(--mono);font-size:14px;padding:9px 10px;outline:none;
+  }
+  input:focus,select:focus{border-color:var(--accent)}
+  input::placeholder{color:var(--ink-faint)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media (max-width:520px){.row3{grid-template-columns:1fr}}
+
+  .note{
+    font-size:11.5px;color:var(--ink-faint);margin-top:10px;line-height:1.5;
+    border-left:2px solid var(--line);padding-left:10px;
+  }
+  .baseline{
+    display:inline-block;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--accent);border:1px solid var(--line);background:var(--panel-2);
+    padding:2px 7px;border-radius:3px;margin-bottom:12px;
+  }
+
+  /* results */
+  .results{margin-top:18px}
+  .cost-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  @media (max-width:620px){.cost-grid{grid-template-columns:1fr 1fr}}
+  .cell{background:var(--panel);padding:16px 14px}
+  .cell .k{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-faint)}
+  .cell .v{font-size:20px;margin-top:7px;color:var(--ink);font-variant-numeric:tabular-nums;word-break:break-word}
+  .cell .v small{font-size:12px;color:var(--ink-dim)}
+
+  table{width:100%;border-collapse:collapse;margin-top:6px;font-variant-numeric:tabular-nums}
+  th,td{text-align:right;padding:10px 12px;border-bottom:1px solid var(--line-soft);font-size:13px}
+  th{color:var(--ink-faint);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+  th:first-child,td:first-child{text-align:left}
+  tr.bind td{background:rgba(232,161,58,.08)}
+  tr.over td{background:rgba(240,86,63,.10)}
+  tr.excl td{color:var(--ink-faint)}
+  .pill{display:inline-block;font-size:10.5px;letter-spacing:.5px;padding:2px 7px;border-radius:3px;text-transform:uppercase}
+  .pill.ok{color:var(--ok);border:1px solid rgba(76,195,138,.4)}
+  .pill.bind{color:var(--accent);border:1px solid rgba(232,161,58,.5)}
+  .pill.over{color:var(--bad);border:1px solid rgba(240,86,63,.5)}
+  .pill.excl{color:var(--ink-faint);border:1px solid var(--line)}
+
+  .banner{
+    margin-top:16px;border-radius:6px;padding:13px 15px;font-size:13px;line-height:1.5;
+    border:1px solid;display:flex;gap:10px;align-items:flex-start;
+  }
+  .banner .ic{font-weight:700;flex:none}
+  .banner.bad{background:rgba(240,86,63,.10);border-color:rgba(240,86,63,.45);color:#ffb3a6}
+  .banner.bad .ic{color:var(--bad)}
+  .banner.warn{background:rgba(232,161,58,.09);border-color:rgba(232,161,58,.40);color:#f0cf9b}
+  .banner.warn .ic{color:var(--warn)}
+  .banner.ok{background:rgba(76,195,138,.08);border-color:rgba(76,195,138,.35);color:#a7e3c8}
+  .banner.ok .ic{color:var(--ok)}
+  .banner code{background:rgba(255,255,255,.06);padding:1px 5px;border-radius:3px}
+
+  .assume{font-size:11.5px;color:var(--ink-faint);margin-top:14px}
+  .assume b{color:var(--ink-dim)}
+
+  footer{margin-top:40px;border-top:1px solid var(--line);padding-top:18px;font-size:11.5px;color:var(--ink-faint);line-height:1.7}
+  footer a{color:var(--ink-dim);text-decoration:none;border-bottom:1px dotted var(--line)}
+  footer a:hover{color:var(--accent);border-color:var(--accent)}
+  footer .snap{color:var(--ink-dim)}
+  footer .prov{color:var(--accent);margin-top:10px;display:block}
+  .seclinks{margin-top:8px}
+  .seclinks a{margin-right:16px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="mark">LLM·CAP·PLANNER</span>
+      <h1>Cost &amp; rate-limit binding calculator</h1>
+    </div>
+    <p class="tag">
+      Deterministic, runs entirely in your browser — <b>no API calls, nothing leaves this page</b>.
+      Tells you projected cost at sustained load and which rate-limit dimension hits <b>429</b> first.
+    </p>
+  </header>
+
+  <div class="grid">
+
+    <!-- INPUTS -->
+    <section class="panel">
+      <p class="ph"><span class="n">01</span> &nbsp;Workload</p>
+
+      <div class="row2">
+        <label class="f">
+          <span class="lt">Provider</span>
+          <select id="provider">
+            <option value="anthropic">Anthropic</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </label>
+        <label class="f">
+          <span class="lt">Model</span>
+          <select id="model"></select>
+        </label>
+      </div>
+
+      <label class="f">
+        <span class="lt"><span>Requests / minute &nbsp;<span style="color:var(--ink-faint)">(R)</span></span></span>
+        <input id="rpm" type="number" min="0" step="1" value="600" inputmode="numeric" />
+      </label>
+
+      <div class="row2">
+        <label class="f">
+          <span class="lt"><span>Avg input tok / req <span style="color:var(--ink-faint)">(Ti)</span></span></span>
+          <input id="ti" type="number" min="0" step="1" value="1200" inputmode="numeric" />
+        </label>
+        <label class="f">
+          <span class="lt"><span>Avg output tok / req <span style="color:var(--ink-faint)">(To)</span></span></span>
+          <input id="to" type="number" min="0" step="1" value="400" inputmode="numeric" />
+        </label>
+      </div>
+    </section>
+
+    <!-- LIMITS -->
+    <section class="panel">
+      <p class="ph"><span class="n">02</span> &nbsp;Your rate-limit tier</p>
+      <span class="baseline" id="baselineTag">planning baseline — verify in dashboard</span>
+
+      <label class="f">
+        <span class="lt"><span>Tier preset</span><span class="hint">changes pre-fill only</span></span>
+        <select id="tier"></select>
+      </label>
+
+      <!-- anthropic limits -->
+      <div id="limAnthropic">
+        <div class="row3">
+          <label class="f">
+            <span class="lt">RPM</span>
+            <input id="aRpm" type="number" min="0" step="1" inputmode="numeric" />
+          </label>
+          <label class="f">
+            <span class="lt">ITPM</span>
+            <input id="aItpm" type="number" min="0" step="1" inputmode="numeric" placeholder="0 = unset" />
+          </label>
+          <label class="f">
+            <span class="lt">OTPM</span>
+            <input id="aOtpm" type="number" min="0" step="1" inputmode="numeric" placeholder="0 = unset" />
+          </label>
+        </div>
+      </div>
+
+      <!-- openai limits -->
+      <div id="limOpenai" style="display:none">
+        <div class="row2">
+          <label class="f">
+            <span class="lt">RPM</span>
+            <input id="oRpm" type="number" min="0" step="1" inputmode="numeric" />
+          </label>
+          <label class="f">
+            <span class="lt">TPM <span style="color:var(--ink-faint)">(in+out combined)</span></span>
+            <input id="oTpm" type="number" min="0" step="1" inputmode="numeric" />
+          </label>
+        </div>
+      </div>
+
+      <p class="note" id="limNote"></p>
+    </section>
+  </div>
+
+  <!-- RESULTS -->
+  <section class="results">
+    <section class="panel" style="margin-bottom:18px">
+      <p class="ph"><span class="n">03</span> &nbsp;Projected cost <span style="color:var(--ink-faint);text-transform:none;letter-spacing:0">— 24/7 sustained load</span></p>
+      <div class="cost-grid">
+        <div class="cell"><div class="k">Cost / request</div><div class="v" id="cReq">—</div></div>
+        <div class="cell"><div class="k">Cost / day</div><div class="v" id="cDay">—</div></div>
+        <div class="cell"><div class="k">Cost / month</div><div class="v" id="cMonth">—</div></div>
+        <div class="cell"><div class="k">Cost / 1M requests</div><div class="v" id="cM">—</div></div>
+      </div>
+      <p class="assume">
+        <b>Assumption:</b> sustained 24/7 at the entered requests/min.
+        requests/month = R × 60 × 24 × 30. No caching, batch discounts, or traffic shaping modelled.
+      </p>
+    </section>
+
+    <section class="panel">
+      <p class="ph"><span class="n">04</span> &nbsp;Rate-limit binding</p>
+      <table>
+        <thead>
+          <tr><th>Dimension</th><th>Your usage / min</th><th>Limit / min</th><th>Util</th><th>Headroom</th><th style="text-align:right">Status</th></tr>
+        </thead>
+        <tbody id="bindRows"></tbody>
+      </table>
+      <div id="banners"></div>
+    </section>
+  </section>
+
+  <footer>
+    <span class="snap">Pricing &amp; model snapshot: 2026-05-15 — verify current numbers in your provider dashboard, presets change.</span>
+    <div class="seclinks">
+      <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener">Anthropic pricing ↗</a>
+      <a href="https://platform.claude.com/docs/en/api/rate-limits" target="_blank" rel="noopener">Anthropic rate limits ↗</a>
+      <a href="https://platform.openai.com/docs/guides/rate-limits" target="_blank" rel="noopener">OpenAI rate limits ↗</a>
+    </div>
+    <span class="prov">Maintained by SolvoHQ</span>
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+
+// ---- DATA SNAPSHOT 2026-05-15 (USD per 1,000,000 tokens: input / output) ----
+const MODELS = {
+  anthropic: {
+    "claude-opus-4-7":   { in: 5.00, out: 25.00 },
+    "claude-sonnet-4-6": { in: 3.00, out: 15.00 },
+    "claude-haiku-4-5":  { in: 1.00, out: 5.00  }
+  },
+  openai: {
+    "gpt-5.5":       { in: 5.00, out: 30.00 },
+    "gpt-5.4":       { in: 2.50, out: 15.00 },
+    "gpt-5.4-mini":  { in: 0.75, out: 4.50  },
+    "gpt-5.4-nano":  { in: 0.20, out: 1.25  },
+    "gpt-4.1":       { in: 2.00, out: 8.00  },
+    "gpt-4.1-nano":  { in: 0.10, out: 0.40  }
+  }
+};
+
+// Documented May-2026 anchor defaults. ITPM varies per model on Anthropic Tier 4;
+// opus uses the same 2,000,000 planning anchor as sonnet. All fields are editable.
+const ANTHROPIC_T4_ITPM = {
+  "claude-opus-4-7": 2000000,
+  "claude-sonnet-4-6": 2000000,
+  "claude-haiku-4-5": 4000000
+};
+function anthropicPreset(tier, model){
+  if (tier === "t1") return { rpm:50,   itpm:0,                          otpm:0 };
+  if (tier === "t4") return { rpm:4000, itpm:ANTHROPIC_T4_ITPM[model]||2000000, otpm:400000 };
+  return null; // custom
+}
+function openaiPreset(tier){
+  if (tier === "t1") return { rpm:1000,  tpm:500000 };
+  if (tier === "t5") return { rpm:10000, tpm:40000000 };
+  return null; // custom
+}
+
+const TIER_OPTS = {
+  anthropic: [["t1","Tier 1"],["t4","Tier 4"],["custom","Custom"]],
+  openai:    [["t1","Tier 1"],["t5","Tier 5"],["custom","Custom"]]
+};
+
+// ---- DOM ----
+const $ = id => document.getElementById(id);
+const elProvider=$("provider"), elModel=$("model"), elTier=$("tier");
+const elRpm=$("rpm"), elTi=$("ti"), elTo=$("to");
+const elARpm=$("aRpm"), elAItpm=$("aItpm"), elAOtpm=$("aOtpm");
+const elORpm=$("oRpm"), elOTpm=$("oTpm");
+const limA=$("limAnthropic"), limO=$("limOpenai"), limNote=$("limNote");
+
+function num(el){ const v=parseFloat(el.value); return Number.isFinite(v)&&v>0 ? v : 0; }
+
+function fmtUSD(x){
+  if (!Number.isFinite(x)) return "—";
+  if (x === 0) return "$0.00";
+  const abs=Math.abs(x);
+  let d;
+  if (abs >= 100) d=2;
+  else if (abs >= 1) d=2;
+  else if (abs >= 0.01) d=4;
+  else d=6;
+  return "$" + x.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function fmtInt(x){
+  if (!Number.isFinite(x)) return "—";
+  return Math.round(x).toLocaleString("en-US");
+}
+function fmtPct(x){
+  if (!Number.isFinite(x)) return "—";
+  return (x>=10 ? x.toFixed(0) : x.toFixed(1)) + "%";
+}
+
+// ---- populate selects ----
+function fillModels(){
+  const p=elProvider.value;
+  elModel.innerHTML="";
+  for (const k of Object.keys(MODELS[p])){
+    const o=document.createElement("option"); o.value=k; o.textContent=k; elModel.appendChild(o);
+  }
+}
+function fillTiers(){
+  const p=elProvider.value;
+  elTier.innerHTML="";
+  for (const [v,t] of TIER_OPTS[p]){
+    const o=document.createElement("option"); o.value=v; o.textContent=t; elTier.appendChild(o);
+  }
+  elTier.value="t1";
+}
+
+// ---- prefill limit inputs from tier preset ----
+function applyPreset(){
+  const p=elProvider.value, tier=elTier.value;
+  if (p==="anthropic"){
+    const ps=anthropicPreset(tier, elModel.value);
+    if (ps){ elARpm.value=ps.rpm; elAItpm.value=ps.itpm; elAOtpm.value=ps.otpm; }
+  } else {
+    const ps=openaiPreset(tier);
+    if (ps){ elORpm.value=ps.rpm; elOTpm.value=ps.tpm; }
+  }
+}
+
+function syncProviderUI(){
+  const p=elProvider.value;
+  limA.style.display = p==="anthropic" ? "" : "none";
+  limO.style.display = p==="openai" ? "" : "none";
+}
+
+// ---- core compute ----
+function compute(){
+  const p=elProvider.value;
+  const model=elModel.value;
+  const price=MODELS[p][model];
+  const R=num(elRpm), Ti=num(elTi), To=num(elTo);
+
+  // cost
+  const costReq = Ti/1e6*price.in + To/1e6*price.out;
+  const reqDay   = R*60*24;
+  const reqMonth = R*60*24*30;
+  $("cReq").innerHTML  = R>0||Ti>0||To>0 ? fmtUSD(costReq) : "—";
+  $("cDay").innerHTML  = R>0 ? fmtUSD(costReq*reqDay)   : "—";
+  $("cMonth").innerHTML= R>0 ? fmtUSD(costReq*reqMonth) : "—";
+  $("cM").innerHTML    = (Ti>0||To>0) ? fmtUSD(costReq*1e6) : "—";
+
+  // dimensions
+  let dims=[];
+  if (p==="anthropic"){
+    dims=[
+      {key:"RPM",  usage:R,    limit:num(elARpm),  unit:"req"},
+      {key:"ITPM", usage:R*Ti, limit:num(elAItpm), unit:"tok"},
+      {key:"OTPM", usage:R*To, limit:num(elAOtpm), unit:"tok"}
+    ];
+  } else {
+    dims=[
+      {key:"RPM", usage:R,        limit:num(elORpm), unit:"req"},
+      {key:"TPM", usage:R*(Ti+To),limit:num(elOTpm), unit:"tok"}
+    ];
+  }
+
+  const included = dims.filter(d=>d.limit>0);
+  const excluded = dims.filter(d=>d.limit<=0);
+  for (const d of included){
+    d.util = d.usage/d.limit*100;
+    d.headroom = d.limit - d.usage;
+  }
+  let binding=null;
+  for (const d of included){ if (!binding || d.util>binding.util) binding=d; }
+
+  // render table
+  const tb=$("bindRows"); tb.innerHTML="";
+  for (const d of dims){
+    const tr=document.createElement("tr");
+    const isExcl = d.limit<=0;
+    const over = !isExcl && d.util>100;
+    const isBind = binding && d===binding;
+    if (isExcl) tr.className="excl";
+    else if (over) tr.className="over";
+    else if (isBind) tr.className="bind";
+
+    let statusHTML;
+    if (isExcl) statusHTML='<span class="pill excl">unset · ignored</span>';
+    else if (over) statusHTML='<span class="pill over">over · 429</span>';
+    else if (isBind) statusHTML='<span class="pill bind">binds first</span>';
+    else statusHTML='<span class="pill ok">ok</span>';
+
+    tr.innerHTML =
+      "<td>"+d.key+"</td>"+
+      "<td>"+(d.usage>0?fmtInt(d.usage):"0")+" <small style='color:var(--ink-faint)'>"+d.unit+"</small></td>"+
+      "<td>"+(isExcl?"<span style='color:var(--ink-faint)'>—</span>":fmtInt(d.limit))+"</td>"+
+      "<td>"+(isExcl?"—":fmtPct(d.util))+"</td>"+
+      "<td>"+(isExcl?"—":(d.headroom>=0?fmtInt(d.headroom):"<span style='color:var(--bad)'>−"+fmtInt(-d.headroom)+"</span>"))+"</td>"+
+      "<td style='text-align:right'>"+statusHTML+"</td>";
+    tb.appendChild(tr);
+  }
+
+  // banners
+  const bn=$("banners"); bn.innerHTML="";
+  const hasInput = R>0;
+
+  if (!hasInput){
+    bn.innerHTML='<div class="banner ok"><span class="ic">i</span><span>Enter a requests/minute value to evaluate rate-limit binding.</span></div>';
+    return;
+  }
+  if (included.length===0){
+    bn.innerHTML='<div class="banner warn"><span class="ic">!</span><span>No limits configured — every dimension is unset (0/blank), so nothing can be computed as binding. Enter your tier limits above.</span></div>';
+    return;
+  }
+
+  const over = included.filter(d=>d.util>100).sort((a,b)=>b.util-a.util);
+  if (over.length){
+    bn.innerHTML += '<div class="banner bad"><span class="ic">✕</span><span><b>YOU WILL 429 on '+over[0].key+'</b> — projected usage is '+fmtPct(over[0].util)+' of the '+over[0].key+' limit ('+fmtInt(over[0].usage)+' vs '+fmtInt(over[0].limit)+'/min). '+(over.length>1?'Also over: '+over.slice(1).map(d=>d.key).join(", ")+'.':'')+'</span></div>';
+  } else if (binding){
+    bn.innerHTML += '<div class="banner ok"><span class="ic">✓</span><span>Within all configured limits. <b>'+binding.key+'</b> binds first at '+fmtPct(binding.util)+' utilization — that is your scaling ceiling.</span></div>';
+  }
+
+  // per-second quantization warning
+  const rpmDim = included.find(d=>d.key==="RPM");
+  if (rpmDim){
+    const rpmIsBinding = binding && binding.key==="RPM";
+    if (rpmIsBinding || rpmDim.util>70){
+      const perSec = Math.ceil(rpmDim.limit/60);
+      bn.innerHTML += '<div class="banner warn"><span class="ic">⚠</span><span><code>'+fmtInt(rpmDim.limit)+'</code> RPM is enforced ~per-second (~<code>ceil(RPM/60) = '+perSec+'</code> req/s). A burst above '+perSec+' req in any single second 429s even when you are under the per-minute cap. Smooth your traffic or size for the per-second figure.</span></div>';
+    }
+  }
+
+  // excluded note
+  if (excluded.length){
+    limNote.textContent = "Excluded from binding calc (limit 0/blank = unset): "+excluded.map(d=>d.key).join(", ")+". A 0 or blank field is treated as not constraining.";
+  } else {
+    limNote.textContent = elProvider.value==="openai"
+      ? "Note: OpenAI also enforces RPD / TPD (per-day) ceilings — not modelled in v0.1."
+      : "All three dimensions active. Set any field to 0/blank to exclude it from the binding calc.";
+  }
+}
+
+// ---- events ----
+elProvider.addEventListener("change", ()=>{
+  fillModels(); fillTiers(); syncProviderUI(); applyPreset(); compute();
+});
+elModel.addEventListener("change", ()=>{
+  if (elTier.value!=="custom") applyPreset();
+  compute();
+});
+elTier.addEventListener("change", ()=>{ applyPreset(); compute(); });
+
+[elRpm,elTi,elTo].forEach(e=>e.addEventListener("input",compute));
+// manual edit of a limit field => switch tier to Custom (honest: user overrode the baseline)
+[elARpm,elAItpm,elAOtpm,elORpm,elOTpm].forEach(e=>e.addEventListener("input",()=>{
+  if (elTier.value!=="custom"){ elTier.value="custom"; }
+  compute();
+}));
+
+// ---- init ----
+fillModels(); fillTiers(); syncProviderUI(); applyPreset(); compute();
+</script>
+</body>
+</html>
