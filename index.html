@@ -337,9 +337,8 @@ function scheduleTrack(){
     if (R <= 0) return;
     const combo = elProvider.value + "|" + elModel.value + "|" + elTier.value;
     if (_seenCombos.has(combo)) return;
-    _seenCombos.add(combo);
     // recompute binding key cheaply for the payload
-    track('plan_computed', { provider: elProvider.value, model: elModel.value, tier: elTier.value });
+    track('plan_computed', { provider: elProvider.value, model: elModel.value, tier: elTier.value }, combo);
   }, 1200);
 }
 
@@ -363,14 +362,23 @@ function fmtPct(x){
   return (x>=10 ? x.toFixed(0) : x.toFixed(1)) + "%";
 }
 
-function track(name, detail){
+function track(name, detail, combo){
   try { window.dispatchEvent(new CustomEvent('llmcapplanner:' + name, { detail: detail||{} })); } catch (_) {}
   try { window.va && window.va('event', { name: name, data: detail||{} }); } catch (_) {}
-  try {
-    if (window.goatcounter && typeof window.goatcounter.count === 'function') {
-      window.goatcounter.count({ path: name, event: true, title: name });
-    }
-  } catch (_) {}
+  // goatcounter's count.js is an async CDN script; on a cold load the
+  // scheduleTrack timer can fire before it is ready. Only mark the combo
+  // seen once the count call actually goes out, else poll briefly + retry.
+  let _gcTries = 0;
+  (function sendGC(){
+    try {
+      if (window.goatcounter && typeof window.goatcounter.count === 'function') {
+        window.goatcounter.count({ path: name, event: true, title: name });
+        if (combo) _seenCombos.add(combo);
+        return;
+      }
+    } catch (_) { return; }
+    if (++_gcTries <= 25) setTimeout(sendGC, 200);
+  })();
 }
 
 // ---- populate selects ----
