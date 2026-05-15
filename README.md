@@ -25,5 +25,6 @@ current numbers in your provider dashboard:
 - [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 - [Anthropic rate limits](https://platform.claude.com/docs/en/api/rate-limits)
 - [OpenAI rate limits](https://platform.openai.com/docs/guides/rate-limits)
+- [Machine-readable snapshot (JSON)](https://llmcapplanner.vercel.app/snapshot.json) — versioned, dated; built for agents/CI to consume.
 
 Maintained by SolvoHQ.

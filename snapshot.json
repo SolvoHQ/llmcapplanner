@@ -1,0 +1,46 @@
+{
+  "version": "2026-05-15",
+  "generated_at": "2026-05-15T13:58:42Z",
+  "currency": "USD",
+  "price_unit": "per_1M_tokens",
+  "disclaimer": "Presets change. Verify current numbers in your provider dashboard. Rate-limit tier numbers are documented anchor defaults you should confirm.",
+  "providers": {
+    "anthropic": {
+      "models": {
+        "claude-opus-4-7":   { "input": 5.00, "output": 25.00 },
+        "claude-sonnet-4-6": { "input": 3.00, "output": 15.00 },
+        "claude-haiku-4-5":  { "input": 1.00, "output": 5.00 }
+      },
+      "rate_limits": {
+        "note": "Anthropic publishes ITPM/OTPM per model, not a single per-tier number.",
+        "per_model": {
+          "claude-opus-4-7":   { "t1": {"rpm":50,"itpm":500000,"otpm":80000},  "t4": {"rpm":4000,"itpm":10000000,"otpm":800000} },
+          "claude-sonnet-4-6": { "t1": {"rpm":50,"itpm":30000,"otpm":8000},     "t4": {"rpm":4000,"itpm":2000000,"otpm":400000} },
+          "claude-haiku-4-5":  { "t1": {"rpm":50,"itpm":50000,"otpm":10000},    "t4": {"rpm":4000,"itpm":4000000,"otpm":800000} }
+        }
+      }
+    },
+    "openai": {
+      "models": {
+        "gpt-5.5":      { "input": 5.00, "output": 30.00 },
+        "gpt-5.4":      { "input": 2.50, "output": 15.00 },
+        "gpt-5.4-mini": { "input": 0.75, "output": 4.50 },
+        "gpt-5.4-nano": { "input": 0.20, "output": 1.25 },
+        "gpt-4.1":      { "input": 2.00, "output": 8.00 },
+        "gpt-4.1-nano": { "input": 0.10, "output": 0.40 }
+      },
+      "rate_limits": {
+        "note": "OpenAI enforces RPM and TPM independently per tier.",
+        "per_tier": {
+          "t1": {"rpm":1000,"tpm":500000},
+          "t5": {"rpm":10000,"tpm":40000000}
+        }
+      }
+    }
+  },
+  "sources": [
+    "https://platform.claude.com/docs/en/about-claude/pricing",
+    "https://platform.claude.com/docs/en/api/rate-limits",
+    "https://platform.openai.com/docs/guides/rate-limits"
+  ]
+}
