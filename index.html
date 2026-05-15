@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>LLM Cap Planner — cost &amp; rate-limit binding calculator</title>
 <meta name="description" content="Deterministic client-side calculator: projected LLM API cost and which rate-limit dimension binds first (429). No data leaves your browser." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://llmcapplanner.vercel.app/" />
+<meta property="og:title" content="LLM Cap Planner — cost &amp; rate-limit binding calculator" />
+<meta property="og:description" content="Deterministic client-side calculator: projected LLM API cost and which rate-limit dimension (RPM / ITPM / OTPM / RPD) binds first. Dated May 2026 snapshot." />
+<meta property="og:site_name" content="LLM Cap Planner" />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="LLM Cap Planner — cost &amp; rate-limit binding calculator" />
+<meta name="twitter:description" content="Projected LLM API cost + which 429 dimension binds first. Dated May 2026 snapshot, not a stale 2024 table." />
 <style>
   :root{
     --bg:#0b0d10;
@@ -45,6 +53,12 @@
   h1{font-size:18px;font-weight:600;margin:0;letter-spacing:.2px}
   .tag{color:var(--ink-dim);font-size:12.5px;margin-top:8px;max-width:62ch}
   .tag b{color:var(--ink)}
+  .freshstamp{
+    display:inline-block;margin-top:12px;
+    font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;
+    color:var(--ink-dim);border:1px solid var(--line);border-radius:3px;
+    padding:4px 9px;
+  }
 
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   @media (max-width:760px){.grid{grid-template-columns:1fr}}
@@ -147,6 +161,7 @@
       Deterministic, runs entirely in your browser — <b>no API calls, nothing leaves this page</b>.
       Tells you projected cost at sustained load and which rate-limit dimension hits <b>429</b> first.
     </p>
+    <span class="freshstamp">SNAPSHOT 2026-05-15 · verify current limits in your provider dashboard — presets change</span>
   </header>
 
   <div class="grid">
