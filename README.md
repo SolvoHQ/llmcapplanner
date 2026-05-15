@@ -1,18 +1,24 @@
 # LLM Cap Planner
 
-**An LLM API cost calculator that leads with a *dated* (May 2026) pricing + rate-limit snapshot and tells you *which 429 dimension binds first* — RPM vs ITPM vs OTPM vs TPM — not a stale 2024 table and not just a cost number.**
+**A dated (May 2026) per-org/per-tier LLM rate-limit-ceiling dataset + planner: for a given model at a given org tier, which limit — RPM vs ITPM vs OTPM vs TPM — binds first, and at what number, before you get 429'd in prod.**
 
 Live app: **<https://llmcapplanner.vercel.app>**
 
-Most "LLM cost calculators" give you a dollar figure off numbers that were true sometime in 2024. That is the wrong question. When you push real traffic at Anthropic Claude or OpenAI GPT, you do not fail on cost — you fail on a `429 Too Many Requests`, and *which* limit you hit first (requests per minute vs input/output tokens per minute) determines how you have to re-architect. This tool answers that, against a snapshot dated **2026-05-15**.
+When you push real traffic at Anthropic Claude or OpenAI GPT, you don't fail on cost — you fail on a `429 Too Many Requests`, and *which* limit you hit first determines how you have to re-architect. This is a real, recurring pain in user language:
 
-It is a deterministic, **client-side** calculator. No API calls, no build step, no server — a single `index.html` (inline CSS + vanilla JS). Nothing you type leaves the browser.
+- **stagewise-io/stagewise#927** — *"This request would exceed your organization's rate limit of 30,000 input tokens per minute ... something to consider for indie devs"*
+- **philspins/opendocket#38** — *"We are currently in Tier 3 ... api returned 429 (rate_limit_error): This request would exceed your organization's rate limit of 450,000 input tokens per minute"*
+- **Jakedismo/codegraph-rust#72** — *"broad agentic MCP calls can immediately exceed the account/model input-token-per-minute limit ... lacks rate-limit-aware budgeting"*
 
-You pick an LLM model + provider, enter expected requests/min and avg input/output tokens per request, and confirm your rate-limit tier numbers. It shows:
+The incumbents don't answer this. models.dev (`curl https://models.dev/api.json`) and the LiteLLM model catalog cover **pricing + context window only** — neither carries per-org/per-tier rate-limit ceilings. That per-tier *"which limit binds first"* data is what this provides, against a snapshot dated **2026-05-15**.
 
-1. **Projected cost** — per request / per day / per month at 24/7 sustained load, plus cost / 1M requests.
-2. **Which rate-limit dimension binds first** (the 429 ceiling) with utilization % and headroom on each — RPM, ITPM, OTPM for Anthropic; RPM, TPM for OpenAI.
-3. **A per-second quantization warning** when RPM is the binding (or >70% util) dimension — minute caps are enforced ~per-second, so a single-second burst can 429 even under the per-minute limit.
+It is a deterministic, **client-side** planner. No API calls, no build step, no server — a single `index.html` (inline CSS + vanilla JS). Nothing you type leaves the browser. It also includes a cost calculator on top of the rate-limit dataset (see below) — but cost is secondary supporting data, not the headline.
+
+You pick a model + provider, enter expected requests/min and avg input/output tokens per request, and confirm your rate-limit tier numbers. It shows:
+
+1. **Which rate-limit dimension binds first** (the 429 ceiling) with utilization % and headroom on each — RPM, ITPM, OTPM for Anthropic; RPM, TPM for OpenAI.
+2. **A per-second quantization warning** when RPM is the binding (or >70% util) dimension — minute caps are enforced ~per-second, so a single-second burst can 429 even under the per-minute limit.
+3. **Projected cost** (secondary) — per request / per day / per month at 24/7 sustained load, plus cost / 1M requests.
 
 ## Rate-limit honesty
 
@@ -22,13 +28,13 @@ This is the difference between this and a hard-coded table that quietly rots: yo
 
 ## MCP server
 
-There is an **MCP (Model Context Protocol) stdio server** in [`mcp/`](mcp/) that wires LLM capacity planning directly into your AI coding agent. It exposes one tool:
+There is an **MCP (Model Context Protocol) stdio server** in [`mcp/`](mcp/) that wires LLM capacity planning directly into your AI coding agent — a planner/calculator on top of the rate-limit dataset. It exposes one tool:
 
 ```
 llm_capacity_plan(provider, model, tier, rpm, in_tok, out_tok)
 ```
 
-It returns `monthly_cost`, `first_binding_429_dim`, and `headroom_per_dim` (plus per-dimension utilization and a `will_429` flag) — computed off the **same dated snapshot** the web app uses, fully offline and deterministic. Every response carries `snapshot_version` so the agent knows exactly how fresh the numbers are.
+It returns `first_binding_429_dim`, `headroom_per_dim` (plus per-dimension utilization and a `will_429` flag), and `monthly_cost` as a secondary field — computed off the **same dated snapshot** the web app uses, fully offline and deterministic. Every response carries `snapshot_version` so the agent knows exactly how fresh the numbers are.
 
 Ask your agent "what tier do I need for 600 rpm of claude-sonnet-4-6 at 2k in / 500 out, and what 429s first?" and it can answer with real arithmetic instead of a hallucinated guess.
 
@@ -49,25 +55,24 @@ See [`mcp/README.md`](mcp/README.md) for the full tool schema, example calls, er
 
 ## Data snapshot
 
-Pricing & model snapshot dated **2026-05-15** (USD per 1,000,000 tokens). Presets change — verify current numbers in your provider dashboard:
+Per-org/per-tier rate-limit-ceiling snapshot dated **2026-05-15**, with pricing as secondary supporting data. Presets change — verify current numbers in your provider dashboard:
 
-- [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 - [Anthropic rate limits](https://platform.claude.com/docs/en/api/rate-limits)
 - [OpenAI rate limits](https://platform.openai.com/docs/guides/rate-limits)
-- [Machine-readable dataset (JSON)](https://llmcapplanner.vercel.app/v1/models.json) — versioned, freshness-stamped; built for agents/CI to consume.
+- [Rate-limit dataset (JSON)](https://llmcapplanner.vercel.app/v1/rate-limits.json) — rate-limit-first, versioned, freshness-stamped; built for agents/CI to consume.
+- [Combined dataset incl. pricing (JSON)](https://llmcapplanner.vercel.app/v1/models.json) — rate limits + pricing.
+- [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)
 
 ## Data contract
 
-The dataset is served as a single versioned JSON at **`https://llmcapplanner.vercel.app/v1/models.json`** (CORS-open, `application/json`). Fields: `schema_version` (currently `1.0`), `last_verified` (date of the most recent manual check against the official provider docs in `sources`), pricing per 1M tokens, and per-model / per-tier rate-limit anchors. Pricing and limits are re-verified whenever a model launches or a price/limit changes; a breaking schema change increments `schema_version` and the prior version stays reachable at its path. Copy-runnable:
+The first-class dataset is the rate-limit-first JSON at **`https://llmcapplanner.vercel.app/v1/rate-limits.json`** (CORS-open, `application/json`) — per-org/per-tier rate-limit ceilings, no pricing. No incumbent dataset (models.dev, LiteLLM) carries per-tier rate limits; they are pricing + context only. The combined dataset that *also* carries pricing is at **`/v1/models.json`**, and **`/snapshot.json`** is a byte-identical stable alias of it. Fields: `schema_version` (currently `1.0`), `last_verified` (date of the most recent manual check against the official provider docs in `sources`), and per-model / per-tier rate-limit anchors. Limits and pricing are re-verified whenever a model launches or a limit/price changes; a breaking schema change increments `schema_version` and the prior version stays reachable at its path. Copy-runnable:
 
 ```sh
-curl -s https://llmcapplanner.vercel.app/v1/models.json | jq '{last_verified, schema_version}'
+curl -s https://llmcapplanner.vercel.app/v1/rate-limits.json | jq '.providers.anthropic.per_model'
 ```
-
-(`/snapshot.json` is kept as a stable alias of the same payload.)
 
 ## Keywords
 
-For anyone searching: this is an **LLM API cost calculator** and **LLM capacity planning** tool focused on the **rate limit 429** problem — **Anthropic Claude rate limits** and **OpenAI GPT rate limits**, the **ITPM OTPM RPM** (and TPM) dimensions, and which one binds first under sustained load. Available both as a web app and as an **MCP server** for AI agents.
+For anyone searching: this is an **LLM API rate-limit ceiling dataset** and **LLM capacity planning** tool focused on the **rate limit 429** problem — **Anthropic Claude rate limits** and **OpenAI GPT rate limits**, the **ITPM OTPM RPM** (and TPM) dimensions, and which one binds first per org tier under sustained load. Pricing / cost is included as a secondary field. Available both as a web app and as an **MCP server** for AI agents.
 
 Maintained by SolvoHQ.

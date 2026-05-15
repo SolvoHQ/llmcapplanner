@@ -3,12 +3,10 @@
   "last_verified": "2026-05-15",
   "version": "2026-05-15",
   "generated_at": "2026-05-15T13:58:42Z",
-  "canonical_url": "https://llmcapplanner.vercel.app/v1/models.json",
-  "freshness_policy": "Rate-limit ceilings (per org tier) and pricing are manually re-verified against each provider's official documentation whenever a model launches or a price/limit changes. `last_verified` is the date of the most recent manual check against the `sources` below. Schema is versioned: a breaking change increments `schema_version` and the prior version stays reachable at its path. Maintained by SolvoHQ.",
-  "currency": "USD",
-  "price_unit": "per_1M_tokens",
+  "canonical_url": "https://llmcapplanner.vercel.app/v1/rate-limits.json",
+  "description": "Per-org/per-tier LLM API rate-limit ceilings — which dimension (RPM / ITPM / OTPM for Anthropic; RPM / TPM for OpenAI) binds first and at what number. No incumbent pricing dataset (models.dev, LiteLLM) carries this. Pricing intentionally omitted here — see /v1/models.json.",
+  "freshness_policy": "Rate-limit ceilings (per org tier) are manually re-verified against each provider's official documentation whenever a model launches or a limit changes. `last_verified` is the date of the most recent manual check against the `sources` below. Schema is versioned: a breaking change increments `schema_version` and the prior version stays reachable at its path. Maintained by SolvoHQ.",
   "disclaimer": "Presets change. Verify current numbers in your provider dashboard. Rate-limit tier numbers are documented anchor defaults you should confirm.",
-  "primary_dimension": "rate_limit_ceiling",
   "providers": {
     "anthropic": {
       "rate_limits": {
@@ -18,11 +16,6 @@
           "claude-sonnet-4-6": { "t1": {"rpm":50,"itpm":30000,"otpm":8000},     "t4": {"rpm":4000,"itpm":2000000,"otpm":400000} },
           "claude-haiku-4-5":  { "t1": {"rpm":50,"itpm":50000,"otpm":10000},    "t4": {"rpm":4000,"itpm":4000000,"otpm":800000} }
         }
-      },
-      "models": {
-        "claude-opus-4-7":   { "input": 5.00, "output": 25.00 },
-        "claude-sonnet-4-6": { "input": 3.00, "output": 15.00 },
-        "claude-haiku-4-5":  { "input": 1.00, "output": 5.00 }
       }
     },
     "openai": {
@@ -32,14 +25,6 @@
           "t1": {"rpm":1000,"tpm":500000},
           "t5": {"rpm":10000,"tpm":40000000}
         }
-      },
-      "models": {
-        "gpt-5.5":      { "input": 5.00, "output": 30.00 },
-        "gpt-5.4":      { "input": 2.50, "output": 15.00 },
-        "gpt-5.4-mini": { "input": 0.75, "output": 4.50 },
-        "gpt-5.4-nano": { "input": 0.20, "output": 1.25 },
-        "gpt-4.1":      { "input": 2.00, "output": 8.00 },
-        "gpt-4.1-nano": { "input": 0.10, "output": 0.40 }
       }
     }
   },
